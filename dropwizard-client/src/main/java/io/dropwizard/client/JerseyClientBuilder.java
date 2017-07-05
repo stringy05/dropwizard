@@ -14,6 +14,7 @@ import io.dropwizard.setup.Environment;
 import io.dropwizard.util.Duration;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpRequestRetryHandler;
+import org.apache.http.client.ServiceUnavailableRetryStrategy;
 import org.apache.http.config.Registry;
 import org.apache.http.conn.DnsResolver;
 import org.apache.http.conn.routing.HttpRoutePlanner;
@@ -228,6 +229,19 @@ public class JerseyClientBuilder {
      */
     public JerseyClientBuilder using(HttpRequestRetryHandler httpRequestRetryHandler) {
         apacheHttpClientBuilder.using(httpRequestRetryHandler);
+        return this;
+    }
+
+    /**
+     * Uses the provided {@link org.apache.http.client.ServiceUnavailableRetryStrategy} for handling request retries
+     * when the upstream server responds. Note this strategy only takes effect if the {@link io.dropwizard.Configuration}
+     * has retries set to 1 or greater
+     *
+     * @param serviceUnavailableRetryStrategy a {@link ServiceUnavailableRetryStrategy} instance
+     * @return {@code this}
+     */
+    public JerseyClientBuilder using(ServiceUnavailableRetryStrategy serviceUnavailableRetryStrategy) {
+        apacheHttpClientBuilder.using(serviceUnavailableRetryStrategy);
         return this;
     }
 

@@ -12,7 +12,9 @@ import io.dropwizard.jersey.validation.Validators;
 import io.dropwizard.lifecycle.setup.ExecutorServiceBuilder;
 import io.dropwizard.lifecycle.setup.LifecycleEnvironment;
 import io.dropwizard.setup.Environment;
+import org.apache.http.HttpResponse;
 import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.ServiceUnavailableRetryStrategy;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.DnsResolver;
@@ -25,6 +27,7 @@ import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.client.SystemDefaultCredentialsProvider;
 import org.apache.http.impl.conn.SystemDefaultDnsResolver;
 import org.apache.http.impl.conn.SystemDefaultRoutePlanner;
+import org.apache.http.protocol.HttpContext;
 import org.glassfish.jersey.client.rx.RxClient;
 import org.glassfish.jersey.client.rx.java8.RxCompletionStageInvoker;
 import org.junit.After;
@@ -256,6 +259,23 @@ public class JerseyClientBuilderTest {
         final DefaultHttpRequestRetryHandler customRetryHandler = new DefaultHttpRequestRetryHandler(2, true);
         builder.using(customRetryHandler);
         verify(apacheHttpClientBuilder).using(customRetryHandler);
+    }
+
+    @Test
+    public void usesACustomServiceUnavailableRetryHandler() {
+        final ServiceUnavailableRetryStrategy serviceUnavailableRetryStrategy = new ServiceUnavailableRetryStrategy() {
+            @Override
+            public boolean retryRequest(HttpResponse response, int executionCount, HttpContext context) {
+                return response.getStatusLine().getStatusCode() > 499 && executionCount < 2;
+            }
+
+            @Override
+            public long getRetryInterval() {
+                return 0;
+            }
+        };
+        builder.using(serviceUnavailableRetryStrategy);
+        verify(apacheHttpClientBuilder).using(serviceUnavailableRetryStrategy);
     }
 
     @Test

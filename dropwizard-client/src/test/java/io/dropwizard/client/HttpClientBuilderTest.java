@@ -35,6 +35,7 @@ import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpRequestRetryHandler;
 import org.apache.http.client.RedirectStrategy;
+import org.apache.http.client.ServiceUnavailableRetryStrategy;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
@@ -426,6 +427,28 @@ public class HttpClientBuilderTest {
 
         assertThat(spyHttpClientBuilderField("retryHandler", apacheBuilder)).isSameAs(customHandler);
     }
+
+    @Test
+    public void usesAServiceUnavailableRetryStrategy() throws Exception {
+        final ServiceUnavailableRetryStrategy serviceUnavailableRetryStrategy = new ServiceUnavailableRetryStrategy() {
+            @Override
+            public boolean retryRequest(HttpResponse response, int executionCount, HttpContext context) {
+                return false;
+            }
+
+            @Override
+            public long getRetryInterval() {
+                return 0;
+            }
+        };
+
+        configuration.setRetries(1);
+        assertThat(builder.using(configuration).using(serviceUnavailableRetryStrategy)
+            .createClient(apacheBuilder, connectionManager, "test")).isNotNull();
+
+        assertThat(spyHttpClientBuilderField("serviceUnavailStrategy", apacheBuilder)).isSameAs(serviceUnavailableRetryStrategy);
+    }
+
 
     @Test
     public void usesCredentialsProvider() throws Exception {

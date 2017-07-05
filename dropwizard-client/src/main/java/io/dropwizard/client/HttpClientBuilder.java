@@ -26,6 +26,7 @@ import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.HttpRequestRetryHandler;
 import org.apache.http.client.RedirectStrategy;
+import org.apache.http.client.ServiceUnavailableRetryStrategy;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.config.Registry;
@@ -69,6 +70,7 @@ public class HttpClientBuilder {
     private DnsResolver resolver = new SystemDefaultDnsResolver();
     private HostnameVerifier verifier;
     private HttpRequestRetryHandler httpRequestRetryHandler;
+    private ServiceUnavailableRetryStrategy serviceUnavailableRetryStrategy;
     private Registry<ConnectionSocketFactory> registry;
 
     private CredentialsProvider credentialsProvider = null;
@@ -141,6 +143,18 @@ public class HttpClientBuilder {
      */
     public HttpClientBuilder using(HttpRequestRetryHandler httpRequestRetryHandler) {
         this.httpRequestRetryHandler = httpRequestRetryHandler;
+        return this;
+    }
+
+    /**
+     * Uses the {@link ServiceUnavailableRetryStrategy} for handling failed request retries. Differs
+     * from {@link HttpRequestRetryHandler} in that it handles responses from upstream server.
+     *
+     * @param serviceUnavailableRetryStrategy an ServiceUnavailableRetryStrategy
+     * @return {@code this}
+     */
+    public HttpClientBuilder using(ServiceUnavailableRetryStrategy serviceUnavailableRetryStrategy) {
+        this.serviceUnavailableRetryStrategy = serviceUnavailableRetryStrategy;
         return this;
     }
 
@@ -302,10 +316,14 @@ public class HttpClientBuilder {
         final ConnectionReuseStrategy reuseStrategy = keepAlive == 0
                 ? new NoConnectionReuseStrategy()
                 : new DefaultConnectionReuseStrategy();
+
+
         final HttpRequestRetryHandler retryHandler = configuration.getRetries() == 0
                 ? NO_RETRIES
                 : (httpRequestRetryHandler == null ? new DefaultHttpRequestRetryHandler(configuration.getRetries(),
                 false) : httpRequestRetryHandler);
+
+
 
         final RequestConfig requestConfig
                 = RequestConfig.custom().setCookieSpec(cookiePolicy)
@@ -387,6 +405,10 @@ public class HttpClientBuilder {
 
         if (httpProcessor != null) {
             builder.setHttpProcessor(httpProcessor);
+        }
+
+        if (serviceUnavailableRetryStrategy != null && configuration.getRetries() > 0) {
+            builder.setServiceUnavailableRetryStrategy(serviceUnavailableRetryStrategy);
         }
 
         return new ConfiguredCloseableHttpClient(builder.build(), requestConfig);
